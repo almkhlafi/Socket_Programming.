@@ -11,20 +11,23 @@
 int authenticateClient(int clientSocket) {
     char username[50];
     char password[50];
+    int authSuccess = 0;
+
     recv(clientSocket, username, sizeof(username), 0);
     recv(clientSocket, password, sizeof(password), 0);
 
     // remove the newline character added by fgets
     username[strcspn(username, "\n")] = '\0';
-    if (strcmp(username, "q") == 0 && strcmp(password, "q") == 0) {
+    if (strcmp(username, "p") == 0 && strcmp(password, "p") == 0) {
         printf("Authentication successful\n");
-        return 1;
+        authSuccess = 1;
     } else {
         printf("Authentication failed\n");
-        return 0;
-
     }
-
+    // Clear the buffer to prepare for the next authentication 
+    memset(username, 0, sizeof(username));
+    memset(password, 0, sizeof(password));
+    return authSuccess;
 }
 
 void handleClient(int socket) {
