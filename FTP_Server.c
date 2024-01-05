@@ -4,8 +4,33 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <unistd.h>
 
-#define PORT 6500 
+#define PORT 6500
+
+int authenticateClient(int clientSocket) {
+    char username[50];
+    char password[50];
+    recv(clientSocket, username, sizeof(username), 0);
+    recv(clientSocket, password, sizeof(password), 0);
+
+    // remove the newline character added by fgets
+    username[strcspn(username, "\n")] = '\0';
+    if (strcmp(username, "q") == 0 && strcmp(password, "q") == 0) {
+        printf("Authentication successful\n");
+        return 1;
+    } else {
+        printf("Authentication failed\n");
+        return 0;
+
+    }
+
+}
+
+void handleClient(int socket) {
+    // Your implementation of handling FTP commands goes here
+    printf("Handling client commands...\n");
+}
 
 int main() {
     int serverSocket, newSocket;
@@ -13,33 +38,46 @@ int main() {
     struct sockaddr_storage serverStorage;
     socklen_t addr_size;
 
-   
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (serverSocket < 0) {
+        printf("Error creating sockett.\n");
+        return -1;
+    }
 
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(PORT);
     serverAddr.sin_addr.s_addr = INADDR_ANY;
     memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);
 
-    // Bind the socket
-    bind(serverSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
+    if (bind(serverSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) < 0) {
+        printf("Error binding socket.\n");
+        return -1;
+    }
 
-    // Listen for incoming connections
-    if(listen(serverSocket,5)==0)
-        printf("Listening\n");
-    else
-        printf("Error\n");
+
+    if (listen(serverSocket, 5) < 0) {
+        printf("Error listening for connections.\n");
+        return -1;
+    }else 
+     printf("Listening\n");
 
     addr_size = sizeof serverStorage;
-    // Accept connections from clients
+    // Accept connections from clients    
     newSocket = accept(serverSocket, (struct sockaddr *) &serverStorage, &addr_size);
+    if (newSocket < 0) {
+        printf("Error accepting connection.\n");
+        return -1;
+    }
 
-    // Handle FTP commands from client
-    handleClient(newSocket);
+    if (authenticateClient(newSocket)) {
+        printf("Authentication successful. State 200\n");
+        handleClient(newSocket);
+    } else {
+        printf("Authentication failed. Connection closed. State 400\n");
+    }
 
     close(newSocket);
     close(serverSocket);
 
     return 0;
 }
-
